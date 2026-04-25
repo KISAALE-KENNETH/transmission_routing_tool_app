@@ -72,6 +72,49 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('setStartBtn').classList.remove('active');
     });
     
+    // Coordinate input handlers
+    window.updateStartFromCoords = function() {
+        const lat = parseFloat(document.getElementById('startLat').value);
+        const lon = parseFloat(document.getElementById('startLon').value);
+        
+        if (!isNaN(lat) && !isNaN(lon)) {
+            currentProject.start = { lat, lon };
+            
+            // Update display
+            document.getElementById('startCoords').textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+            
+            // Place marker on map
+            if (window.startMarker) {
+                window.startMarker.setLatLng([lat, lon]);
+            } else {
+                window.startMarker = L.marker([lat, lon], {icon: startIcon}).addTo(map);
+            }
+            
+            console.log('✓ Start point set from coordinates:', lat, lon);
+        }
+    };
+    
+    window.updateEndFromCoords = function() {
+        const lat = parseFloat(document.getElementById('endLat').value);
+        const lon = parseFloat(document.getElementById('endLon').value);
+        
+        if (!isNaN(lat) && !isNaN(lon)) {
+            currentProject.end = { lat, lon };
+            
+            // Update display
+            document.getElementById('endCoords').textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+            
+            // Place marker on map
+            if (window.endMarker) {
+                window.endMarker.setLatLng([lat, lon]);
+            } else {
+                window.endMarker = L.marker([lat, lon], {icon: endIcon}).addTo(map);
+            }
+            
+            console.log('✓ End point set from coordinates:', lat, lon);
+        }
+    };
+    
     // AHP weight sliders
     setupWeightSliders();
     
@@ -212,9 +255,15 @@ function removeWaypoint(waypointId) {
  */
 function renderWaypoints() {
     const container = document.getElementById('waypointsList');
+    
+    // Add null check to prevent "Cannot set properties of null" error
+    if (!container) {
+        console.warn('waypointsList container not found in DOM');
+        return;
+    }
 
     if (waypoints.length === 0) {
-        container.innerHTML = '<p class="help-text" style="font-size: 11px; margin: 5px 0;">No waypoints added</p>';
+        container.innerHTML = '<p class="help-text" style="font-size: 11px; margin: 5px 0;">No angle points added</p>';
         return;
     }
 
@@ -326,6 +375,8 @@ async function optimizeRoute() {
             }
         }
 
+        console.log('🎯 Selected algorithm:', algorithm);
+
         // Handle "both" option - run comparison
         let requestBody = {};
         if (algorithm === 'both') {
@@ -333,6 +384,8 @@ async function optimizeRoute() {
         } else {
             requestBody = { algorithm: algorithm };
         }
+
+        console.log('📦 Request body:', requestBody);
 
         console.log('Starting optimization for project:', currentProject.projectId, 'request:', requestBody);
         const optimizeResponse = await fetch(`/api/projects/${currentProject.projectId}/optimize`, {
@@ -351,11 +404,21 @@ async function optimizeRoute() {
         
         const result = await optimizeResponse.json();
 
+        console.log('✅ Optimization successful!');
+        console.log('🔍 Algorithm used:', result.algorithm_used);
+        console.log('📍 Route points:', result.route?.geometry?.coordinates?.length || 0);
+
         // Display route on map (without towers initially)
         displayRoute(result.route, []);
 
         // Display results (include algorithm used and comparison if present)
-        displayResults(result);
+        try {
+            displayResults(result);
+            console.log('✅ Results displayed successfully');
+        } catch (displayError) {
+            console.error('❌ Error displaying results:', displayError);
+            // Don't block the route display if results fail
+        }
 
         if (result.algorithm_comparison) {
             const comp = result.algorithm_comparison;
@@ -738,20 +801,35 @@ function simplifyWarningMessage(warning) {
  * Display optimization results
  */
 function displayResults(result) {
+    console.log('📊 displayResults called with:', result);
+    
+    if (!result || !result.validation) {
+        console.error('❌ Invalid result object:', result);
+        return;
+    }
+    
     const metrics = result.validation.metrics;
-    const errors = result.validation.errors;
-    const warnings = result.validation.warnings;
+    const errors = result.validation.errors || [];
+    const warnings = result.validation.warnings || [];
     const costBreakdown = result.cost_breakdown;
+    
+    console.log('📈 Metrics:', metrics);
+    console.log('💰 Cost breakdown:', costBreakdown);
+
+    if (!metrics) {
+        console.error('❌ No metrics in validation result');
+        return;
+    }
 
     let html = '<div class="metrics">';
     if (result.algorithm_used) {
         html += `<p><strong>Algorithm:</strong> ${result.algorithm_used}</p>`;
     }
-    html += `<p><strong>Route Length:</strong> ${(metrics.total_length_km).toFixed(2)} km</p>`;
-    html += `<p><strong>Estimated Towers:</strong> ${result.route.properties.estimated_towers}</p>`;
-    html += `<p><strong>Avg Span Length:</strong> ${result.route.properties.avg_span_length_m.toFixed(1)} m</p>`;
-    html += `<p><strong>Total Cost:</strong> $${(costBreakdown.total_cost / 1000000).toFixed(2)}M</p>`;
-    html += `<p><strong>Cost per km:</strong> $${(costBreakdown.cost_per_km / 1000).toFixed(0)}K</p>`;
+    html += `<p><strong>Route Length:</strong> ${(metrics.total_length_km || 0).toFixed(2)} km</p>`;
+    html += `<p><strong>Estimated Towers:</strong> ${result.route?.properties?.estimated_towers || 0}</p>`;
+    html += `<p><strong>Avg Span Length:</strong> ${(result.route?.properties?.avg_span_length_m || 0).toFixed(1)} m</p>`;
+    html += `<p><strong>Total Cost:</strong> $${((costBreakdown?.total_cost || 0) / 1000000).toFixed(2)}M</p>`;
+    html += `<p><strong>Cost per km:</strong> $${((costBreakdown?.cost_per_km || 0) / 1000).toFixed(0)}K</p>`;
     if (result.avoidance_metrics && result.avoidance_metrics.overall_avoidance_score != null) {
         html += `<p><strong>Overall avoidance score:</strong> ${result.avoidance_metrics.overall_avoidance_score}% (average across feature layers)</p>`;
     }
@@ -759,6 +837,8 @@ function displayResults(result) {
         html += `<p><strong>Elevation along route:</strong> ${result.route_elevation.min_m.toFixed(0)}–${result.route_elevation.max_m.toFixed(0)} m (avg ${result.route_elevation.avg_m.toFixed(0)} m)</p>`;
     }
     html += '</div>';
+    
+    console.log('✅ Generated metrics HTML, length:', html.length);
 
     // Show algorithm comparison if both were run
     if (result.algorithm_comparison) {
@@ -791,18 +871,53 @@ function displayResults(result) {
     }
 
     // Show user-friendly route quality assessment
-    html += generateRouteQualityCard(errors, warnings, metrics, result);
+    console.log('📝 Generating route quality card...');
+    try {
+        html += generateRouteQualityCard(errors, warnings, metrics, result);
+        console.log('✅ Route quality card generated');
+    } catch (qualityError) {
+        console.error('❌ Error generating quality card:', qualityError);
+        html += '<p>Route quality assessment unavailable</p>';
+    }
 
-    document.getElementById('routeMetrics').innerHTML = html;
+    console.log('📊 Updating routeMetrics element...');
+    const routeMetrics = document.getElementById('routeMetrics');
+    if (routeMetrics) {
+        console.log('✅ Found routeMetrics element, setting innerHTML...');
+        routeMetrics.innerHTML = html;
+        console.log('✅ routeMetrics updated successfully');
+    } else {
+        console.error('❌ routeMetrics element not found in DOM');
+    }
 
     // Create graphical charts
-    createDynamicAvoidanceChart(result);
-    createElevationChart(result);
+    console.log('📈 Creating charts...');
+    try {
+        createDynamicAvoidanceChart(result);
+        createElevationChart(result);
+        console.log('✅ Charts created');
+    } catch (chartError) {
+        console.error('❌ Error creating charts:', chartError);
+    }
 
     // Display simple cost summary
-    displaySimpleCostSummary(costBreakdown);
+    console.log('💰 Displaying cost summary...');
+    try {
+        displaySimpleCostSummary(costBreakdown);
+        console.log('✅ Cost summary displayed');
+    } catch (costError) {
+        console.error('❌ Error displaying cost summary:', costError);
+    }
 
-    document.getElementById('resultsSection').style.display = 'block';
+    const resultsSection = document.getElementById('resultsSection');
+    if (resultsSection) {
+        console.log('✅ Showing results section');
+        resultsSection.style.display = 'block';
+    } else {
+        console.error('❌ resultsSection element not found in DOM');
+    }
+    
+    console.log('✅ displayResults completed successfully');
 }
 
 // Store chart instances to destroy before recreating
@@ -1066,7 +1181,12 @@ function displaySimpleCostSummary(costBreakdown) {
     
     html += '</div>';
 
-    document.getElementById('costBreakdown').innerHTML = html;
+    const costBreakdownEl = document.getElementById('costBreakdown');
+    if (costBreakdownEl) {
+        costBreakdownEl.innerHTML = html;
+    } else {
+        console.warn('costBreakdown element not found in DOM');
+    }
 }
 
 /**
