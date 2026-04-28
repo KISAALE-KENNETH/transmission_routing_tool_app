@@ -77,15 +77,19 @@ function clearPreviousRoute() {
 document.addEventListener('DOMContentLoaded', function() {
     // Set start/end point buttons
     document.getElementById('setStartBtn').addEventListener('click', function() {
-        selectionMode = 'start';
+        window.selectionMode = 'start';
         this.classList.add('active');
         document.getElementById('setEndBtn').classList.remove('active');
+        document.body.style.cursor = 'crosshair';
+        console.log('✓ Set Start Point mode activated - click on map');
     });
     
     document.getElementById('setEndBtn').addEventListener('click', function() {
-        selectionMode = 'end';
+        window.selectionMode = 'end';
         this.classList.add('active');
         document.getElementById('setStartBtn').classList.remove('active');
+        document.body.style.cursor = 'crosshair';
+        console.log('✓ Set End Point mode activated - click on map');
     });
     
     // Coordinate input handlers — called from HTML onchange/onkeydown and ✓ button
@@ -147,18 +151,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Auto-regenerate when classification method or n_classes changes
-    ['classificationMethod', 'nClasses'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('change', function() {
-                if (document.getElementById('costSurfaceLegend').style.display === 'block') {
-                    generateCostSurface();
-                }
-            });
-        }
-    });
-
     // Export buttons
     document.getElementById('exportBtn')?.addEventListener('click', () => exportRoute('geojson'));
     document.getElementById('exportXyzBtn')?.addEventListener('click', () => exportRoute('xyz'));
@@ -177,6 +169,8 @@ document.addEventListener('DOMContentLoaded', function() {
  * Setup AHP weight sliders with auto-normalization
  */
 function setupWeightSliders() {
+    console.log('🎚️ Setting up weight sliders...');
+    
     const sliders = {
         protected_areas: document.getElementById('protectedWeight'),
         rivers: document.getElementById('riversWeight'),
@@ -201,14 +195,21 @@ function setupWeightSliders() {
 
     // Update weights when sliders change
     Object.keys(sliders).forEach(key => {
-        if (sliders[key]) {  // Check if element exists
+        if (sliders[key] && values[key]) {  // Check if both elements exist
             sliders[key].addEventListener('input', function() {
-                ahpWeights[key] = parseFloat(this.value);
-                values[key].textContent = parseFloat(this.value).toFixed(3);
+                const newValue = parseFloat(this.value);
+                ahpWeights[key] = newValue;
+                values[key].textContent = newValue.toFixed(3);
                 updateWeightSum();
+                console.log(`✓ Slider ${key} changed to ${newValue.toFixed(3)}`);
             });
+            console.log(`✓ Slider ${key} initialized`);
+        } else {
+            console.warn(`⚠️ Slider or value element missing for ${key}`);
         }
     });
+    
+    console.log('✅ Weight sliders setup complete');
 }
 
 /**
@@ -243,9 +244,10 @@ function addWaypoint() {
     renderWaypoints();
 
     // Enable map-click mode so user can immediately click to place it
-    selectionMode = 'waypoint';
-    currentWaypointId = waypointId;
+    window.selectionMode = 'waypoint';
+    window.currentWaypointId = waypointId;
     document.body.style.cursor = 'crosshair';
+    console.log(`✓ Add Angle Point mode activated - click on map to place ${waypoint.name}`);
 }
 
 /**
@@ -338,8 +340,8 @@ function applyWaypointFromCoords(waypointId) {
  * Switch to map-click mode to pick a waypoint location
  */
 function pickWaypointOnMap(waypointId) {
-    selectionMode = 'waypoint';
-    currentWaypointId = waypointId;
+    window.selectionMode = 'waypoint';
+    window.currentWaypointId = waypointId;
     document.body.style.cursor = 'crosshair';
     // Brief visual feedback
     const wp = waypoints.find(w => w.id === waypointId);
@@ -824,10 +826,6 @@ function generateRouteOptimalityGraph(errors, warnings, result) {
 
     return html;
 }
-    `;
-
-    return html;
-}
 
 /**
  * Group similar messages to avoid repetition
@@ -954,15 +952,7 @@ function displayResults(result) {
         html += '</div>';
     }
 
-    // Show user-friendly route quality assessment
-    console.log('📝 Generating route quality card...');
-    try {
-        html += generateRouteQualityCard(errors, warnings, metrics, result);
-        console.log('✅ Route quality card generated');
-    } catch (qualityError) {
-        console.error('❌ Error generating quality card:', qualityError);
-        html += '<p>Route quality assessment unavailable</p>';
-    }
+    // Route quality card removed per user request
 
     console.log('📊 Updating routeMetrics element...');
     const routeMetrics = document.getElementById('routeMetrics');
@@ -1568,8 +1558,8 @@ async function generateCostSurface() {
                 layers: layersConfig,
                 bounds: boundsArray,
                 resolution_m: 100,   // 100m for fast preview; real data files use their native resolution
-                classification: document.getElementById('classificationMethod')?.value || 'quantile',
-                n_classes: parseInt(document.getElementById('nClasses')?.value || '5'),
+                classification: 'quantile',  // Always use quantile classification
+                n_classes: 5,                // Always use 5 classes
                 start_point: currentProject.start ? { lat: currentProject.start.lat, lon: currentProject.start.lon } : null,
                 end_point:   currentProject.end   ? { lat: currentProject.end.lat,   lon: currentProject.end.lon   } : null,
             })

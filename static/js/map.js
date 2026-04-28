@@ -23,9 +23,9 @@ let currentProject = {
     projectId: null
 };
 
-// Point selection mode
-let selectionMode = null; // 'start', 'end', or 'waypoint'
-let currentWaypointId = null; // ID of waypoint being placed
+// Point selection mode - make these global so optimize.js can access them
+window.selectionMode = null; // 'start', 'end', or 'waypoint'
+window.currentWaypointId = null; // ID of waypoint being placed
 
 /**
  * Initialize the map with BLANK WHITE SPACE (no basemaps)
@@ -71,7 +71,9 @@ function initMap() {
 
     // Map click handler for point selection
     map.on('click', function(e) {
-        if (selectionMode) {
+        console.log('Map clicked at:', e.latlng, 'selectionMode:', window.selectionMode);
+        
+        if (window.selectionMode) {
             const lat = e.latlng.lat;
             const lng = e.latlng.lng;
             
@@ -81,17 +83,17 @@ function initMap() {
                 return;
             }
             
-            if (selectionMode === 'start') {
+            if (window.selectionMode === 'start') {
                 setStartPoint(lat, lng);
-            } else if (selectionMode === 'end') {
+            } else if (window.selectionMode === 'end') {
                 setEndPoint(lat, lng);
-            } else if (selectionMode === 'waypoint' && currentWaypointId) {
-                setWaypointLocation(currentWaypointId, lat, lng);
+            } else if (window.selectionMode === 'waypoint' && window.currentWaypointId) {
+                setWaypointLocation(window.currentWaypointId, lat, lng);
             }
             
             // Reset selection mode
-            selectionMode = null;
-            currentWaypointId = null;
+            window.selectionMode = null;
+            window.currentWaypointId = null;
             document.body.style.cursor = 'default';
         }
     });

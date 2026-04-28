@@ -123,3 +123,6 @@ data/*/*.tiff
 test_output/*.png
 test_output/*.jpg
 
+
+# Cost surface temporary files
+static/cost_surface_*.tif

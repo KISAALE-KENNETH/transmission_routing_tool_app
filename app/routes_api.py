@@ -1192,27 +1192,51 @@ def get_cost_surface_image(project_id):
         except Exception as e:
             return jsonify({'error': f'Failed to load cost surface: {str(e)}'}), 500
     
-    # Vectorized color mapping — exact QGIS 5-band style
+    # Dynamic color mapping based on actual data range
     min_val = float(np.nanmin(cost_surface))
     max_val = float(np.nanmax(cost_surface))
     height, width = cost_surface.shape
 
+    # Normalize to 0-1 range based on actual data
     if max_val > min_val:
-        scaled = 156.0 + ((cost_surface - min_val) / (max_val - min_val)) * (476.0 - 156.0)
+        normalized = (cost_surface - min_val) / (max_val - min_val)
     else:
-        scaled = np.full_like(cost_surface, 316.0)
+        normalized = np.full_like(cost_surface, 0.5, dtype=np.float32)
 
+    # Create RGBA image with dynamic 5-class quantile classification
+    rgba_image = np.zeros((height, width, 4), dtype=np.uint8)
+    
+    # Calculate quantile thresholds dynamically (5 classes)
+    valid_data = cost_surface[~np.isnan(cost_surface)]
+    if len(valid_data) > 0:
+        q20 = np.percentile(valid_data, 20)
+        q40 = np.percentile(valid_data, 40)
+        q60 = np.percentile(valid_data, 60)
+        q80 = np.percentile(valid_data, 80)
+        
+        # Define color bands based on quantiles (green=low cost, red=high cost)
+        band_defs = [
+            (cost_surface < q20,                           34,  139,  34),   # Dark green - lowest 20%
+            ((cost_surface >= q20) & (cost_surface < q40), 124, 205,  50),   # Light green - 20-40%
+            ((cost_surface >= q40) & (cost_surface < q60), 255, 230,   0),   # Yellow - 40-60%
+            ((cost_surface >= q60) & (cost_surface < q80), 255, 140,   0),   # Orange - 60-80%
+            (cost_surface >= q80,                          220,  20,  20),   # Red - highest 20%
+        ]
+    else:
+        # Fallback if no valid data
+        band_defs = [
+            (normalized < 0.2,                           34,  139,  34),
+            ((normalized >= 0.2) & (normalized < 0.4),  124,  205,  50),
+            ((normalized >= 0.4) & (normalized < 0.6),  255,  230,   0),
+            ((normalized >= 0.6) & (normalized < 0.8),  255,  140,   0),
+            (normalized >= 0.8,                         220,   20,  20),
+        ]
+    
+    # Add subtle noise for QGIS-style texture
     rng_img = np.random.default_rng(42)
     noise = rng_img.integers(-12, 13, size=(height, width), dtype=np.int16)
-
-    rgba_image = np.zeros((height, width, 4), dtype=np.uint8)
-    band_defs = [
-        (scaled < 220,                          34,  139,  34),
-        ((scaled >= 220) & (scaled < 284),     124,  205,  50),
-        ((scaled >= 284) & (scaled < 348),     255,  230,   0),
-        ((scaled >= 348) & (scaled < 412),     255,  140,   0),
-        (scaled >= 412,                        220,   20,  20),
-    ]
+    
+    # Apply colors with noise
     for mask, r, g, b in band_defs:
         rgba_image[mask, 0] = np.clip(r + noise[mask], 0, 255).astype(np.uint8)
         rgba_image[mask, 1] = np.clip(g + noise[mask], 0, 255).astype(np.uint8)
@@ -1237,13 +1261,21 @@ def get_cost_surface_image(project_id):
     # Expose metadata as headers so the frontend can position the overlay
     response.headers['X-Cost-Min'] = str(round(min_val, 2))
     response.headers['X-Cost-Max'] = str(round(max_val, 2))
+    
+    # Add quantile thresholds for dynamic legend
+    if len(valid_data) > 0:
+        response.headers['X-Cost-Q20'] = str(round(q20, 2))
+        response.headers['X-Cost-Q40'] = str(round(q40, 2))
+        response.headers['X-Cost-Q60'] = str(round(q60, 2))
+        response.headers['X-Cost-Q80'] = str(round(q80, 2))
+    
     response.headers['X-Bounds-Min-Lon'] = str(bounds[0])
     response.headers['X-Bounds-Min-Lat'] = str(bounds[1])
     response.headers['X-Bounds-Max-Lon'] = str(bounds[2])
     response.headers['X-Bounds-Max-Lat'] = str(bounds[3])
     response.headers['Access-Control-Expose-Headers'] = (
-        'X-Cost-Min, X-Cost-Max, X-Bounds-Min-Lon, X-Bounds-Min-Lat, '
-        'X-Bounds-Max-Lon, X-Bounds-Max-Lat'
+        'X-Cost-Min, X-Cost-Max, X-Cost-Q20, X-Cost-Q40, X-Cost-Q60, X-Cost-Q80, '
+        'X-Bounds-Min-Lon, X-Bounds-Min-Lat, X-Bounds-Max-Lon, X-Bounds-Max-Lat'
     )
 
     return response

@@ -193,20 +193,6 @@
                         </p>
                     </div>
 
-                    <!-- Classification controls -->
-                    <div style="margin-top: 10px; display: flex; gap: 6px; align-items: center;">
-                        <label style="font-size: 10px; color: #555; white-space: nowrap;">Classification:</label>
-                        <select id="classificationMethod" style="flex:1; font-size: 10px; padding: 3px; border: 1px solid #ccc; border-radius: 3px;">
-                            <option value="quantile" selected>Quantile</option>
-                            <option value="equal_interval">Equal Interval</option>
-                        </select>
-                        <select id="nClasses" style="width: 48px; font-size: 10px; padding: 3px; border: 1px solid #ccc; border-radius: 3px;">
-                            <option value="4">4</option>
-                            <option value="5" selected>5</option>
-                            <option value="6">6</option>
-                        </select>
-                    </div>
-
                     <!-- Dynamic QGIS-style legend -->
                     <div id="costSurfaceLegend" style="margin-top: 12px; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 5px; display: none; box-shadow: 0 1px 4px rgba(0,0,0,0.1);">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -409,10 +395,59 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <!-- Custom JS -->
-    <script src="{{ url_for('static', filename='js/map.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/optimize.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/qgis_tools.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/layer_manager.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/map.js') }}?v={{ range(1, 10000) | random }}"></script>
+    <script src="{{ url_for('static', filename='js/optimize.js') }}?v={{ range(1, 10000) | random }}"></script>
+    <script src="{{ url_for('static', filename='js/qgis_tools.js') }}?v={{ range(1, 10000) | random }}"></script>
+    <script src="{{ url_for('static', filename='js/layer_manager.js') }}?v={{ range(1, 10000) | random }}"></script>
+    
+    <!-- Debug Script - Remove after testing -->
+    <script>
+        console.log('=== DEBUG SCRIPT LOADED ===');
+        
+        // Wait for DOM to be fully ready
+        window.addEventListener('load', function() {
+            console.log('=== WINDOW LOADED - Running Debug Checks ===');
+            
+            // Check if buttons exist
+            const setStartBtn = document.getElementById('setStartBtn');
+            const setEndBtn = document.getElementById('setEndBtn');
+            const addWaypointBtn = document.getElementById('addWaypointBtn');
+            
+            console.log('Button Check:');
+            console.log('  setStartBtn:', setStartBtn ? '✓ FOUND' : '✗ NOT FOUND');
+            console.log('  setEndBtn:', setEndBtn ? '✓ FOUND' : '✗ NOT FOUND');
+            console.log('  addWaypointBtn:', addWaypointBtn ? '✓ FOUND' : '✗ NOT FOUND');
+            
+            // Check if sliders exist
+            const protectedWeight = document.getElementById('protectedWeight');
+            const protectedValue = document.getElementById('protectedValue');
+            
+            console.log('Slider Check:');
+            console.log('  protectedWeight:', protectedWeight ? '✓ FOUND' : '✗ NOT FOUND');
+            console.log('  protectedValue:', protectedValue ? '✓ FOUND' : '✗ NOT FOUND');
+            
+            // Check if window.selectionMode exists
+            console.log('Global Variables:');
+            console.log('  window.selectionMode:', typeof window.selectionMode, '=', window.selectionMode);
+            console.log('  window.currentWaypointId:', typeof window.currentWaypointId, '=', window.currentWaypointId);
+            
+            // Check if map exists
+            console.log('Map Check:');
+            console.log('  window.map:', typeof window.map, window.map ? '✓ EXISTS' : '✗ NOT EXISTS');
+            
+            // Try to manually attach a test listener
+            if (setStartBtn) {
+                console.log('Attempting to attach test listener to setStartBtn...');
+                setStartBtn.addEventListener('click', function() {
+                    console.log('🎯 TEST LISTENER FIRED - Button was clicked!');
+                    alert('Button click detected! If you see this, the button works.');
+                });
+                console.log('✓ Test listener attached successfully');
+            }
+            
+            console.log('=== DEBUG CHECKS COMPLETE ===');
+        });
+    </script>
 </body>
 </html>
 
