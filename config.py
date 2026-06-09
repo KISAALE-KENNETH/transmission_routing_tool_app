@@ -61,6 +61,10 @@ class Config:
     UGANDA_DISTRICTS_FOLDER = os.path.join(DATA_FOLDER, 'uganda_districts')  # Districts
     LAND_USE_FOLDER = os.path.join(DATA_FOLDER, 'land_use')  # Land Use
     
+    # UETCL Infrastructure Layers
+    TRANSMISSION_LINES_FOLDER = os.path.join(DATA_FOLDER, 'transmission_lines')  # Existing transmission lines
+    SUBSTATIONS_FOLDER = os.path.join(DATA_FOLDER, 'substations')  # UETCL substations
+    
     # Case Study: Olwiyo - South Sudan Line Specifications
     VOLTAGE_LEVEL = 400  # kV
     TOWER_TYPE = 'lattice'  # Steel lattice towers
