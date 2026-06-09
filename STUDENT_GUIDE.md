@@ -269,6 +269,7 @@ Each subfolder holds **shapefiles** (`.shp` + companion files) or **GeoTIFF** ra
 | `land_use/` | OSM land use polygons | Agriculture vs urban cost |
 | `transmission_lines/` | Existing UETCL lines | Corridor sharing |
 | `substations/` | UETCL substation points | Connection points |
+| `planned_routes/` | Option 2_Uganda planned transmission route | Reference alignment overlay |
 | `uganda_districts/` | District boundaries | Map basemap |
 | `cache/` | Cached API responses | Speed up repeated requests |
 
@@ -441,7 +442,7 @@ Each subfolder holds **shapefiles** (`.shp` + companion files) or **GeoTIFF** ra
   - `displayRoute()` / `displayTowers()` — draws optimization output
 
 #### `static/js/layer_manager.js`
-- **Purpose:** Connects the 14 layer checkboxes to `loadGISLayer()`.
+- **Purpose:** Connects the 15 layer checkboxes to `loadGISLayer()`.
 - **Key functions:** `initLayerCheckboxes()`, `toggleLayer()`, `clearAllLayers()`.
 
 #### `static/js/qgis_tools.js`
@@ -823,9 +824,17 @@ views.py: dashboard() → render dashboard.html
 
 ### Feature 7: GIS Layer Overlays
 
-**What:** 14 checkbox layers for visual context (districts, rivers, protected areas, etc.).
+**What:** 15 checkbox layers for visual context (districts, rivers, protected areas, planned routes, etc.).
 
-**Important:** These layers are for **visualization**. The optimization uses a overlapping but not identical set of rasterized layers.
+**New layer — Planned Routes:** The `planned_routes` layer loads the `Option 2_Uganda.shp` shapefile from `data/planned_routes/`. This is a pre-engineered reference alignment (LineString geometry, originally in Arc 1960 / UTM Zone 36N, auto-reprojected to WGS 84). It displays as a **purple dashed line** on the map and can be toggled from the **Power Infrastructure (UETCL)** section of the layer panel.
+
+**How it was added:**
+- Shapefile copied from an external source into `data/planned_routes/`.
+- `PLANNED_ROUTES_FOLDER` registered in `config.py`.
+- Layer name `planned_routes` mapped in `uganda_gis_loader.py`, `gis_data_loader.py`, and `routes_qgis_api.py`.
+- Checkbox `showPlannedRoutes` added to `dashboard.html` with a handler in `layer_manager.js`.
+
+**Important:** These layers are for **visualization**. The optimization uses an overlapping but not identical set of rasterized layers.
 
 ---
 
