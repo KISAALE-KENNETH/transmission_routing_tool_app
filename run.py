@@ -3,6 +3,18 @@ Main entry point for Transmission Line Routing Optimization Tool
 Run this file to start the Flask development server
 """
 import os
+import sys
+
+# Force UTF-8 on stdout/stderr so emoji log lines (e.g. "[OK]", "[WARN]", "[ERR]")
+# do not crash the Windows cp1252 console.  Without this, a single emoji print
+# inside a request handler raises UnicodeEncodeError and the exception text
+# ends up serialised into the JSON response (which produces a misleading 500
+# such as "'charmap' codec can't encode character '\u274c'").
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding='utf-8')
+    except (AttributeError, OSError):
+        pass
 
 try:
     from dotenv import load_dotenv

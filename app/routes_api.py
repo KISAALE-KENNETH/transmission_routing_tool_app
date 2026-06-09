@@ -399,20 +399,25 @@ def optimize_route(project_id):
         print(f"   Mean cost: {cost_surface.mean():.2f}")
         print(f"   Std dev: {cost_surface.std():.2f}")
         
-        # Apply MINIMUM cost floor to prevent straight-line routing
-        # This forces algorithm to actively seek lowest-cost paths rather than going straight
+        # Stretch the cost surface contrast so obstacles stand clearly above
+        # clear terrain.  Without this the algorithms see a near-uniform surface
+        # and just walk the shortest line from start to end.
+        #
+        #     enhanced = (normalized) ** contrast_factor,  contrast_factor > 1
+        #
+        # x**1.5 for x in [0, 1] pushes low values toward 0 (clear terrain gets
+        # cheaper) while leaving high values near 1 (obstacles stay expensive).
+        # The result is a wider dynamic range and bendier, obstacle-avoiding
+        # routes.  Using 1/1.5 (a *root* function) does the opposite and
+        # flattens the surface, which is what we want to avoid.
         cost_surface = np.asarray(cost_surface, dtype=np.float32)
         min_cost = cost_surface.min()
         max_cost = cost_surface.max()
-        
-        # Increase contrast: amplify high-cost areas (obstacles) more than low-cost areas
+
         if max_cost > min_cost:
-            # Normalize to 0-1 range
             cost_normalized = (cost_surface - min_cost) / (max_cost - min_cost)
-            # Apply power function to increase contrast (values > 0.5 become higher, < 0.5 become lower)
             contrast_factor = 1.5
-            cost_enhanced = np.power(cost_normalized, 1.0 / contrast_factor)
-            # Scale back to original range
+            cost_enhanced = np.power(cost_normalized, contrast_factor)
             cost_surface = cost_enhanced * (max_cost - min_cost) + min_cost
             print(f"🎯 Enhanced cost surface contrast (min={min_cost:.2f}, max={max_cost:.2f})")
         
@@ -482,9 +487,11 @@ def optimize_route(project_id):
             db.session.commit()
             return jsonify({'error': 'No valid path found for the selected algorithm'}), 400
 
-        # REDUCED smoothing to preserve bends around obstacles
-        # tolerance=2 means keep more intermediate points instead of straightening
-        simplified_path = pathfinder.simplify_path(path_result['path'], tolerance=2)
+        # The path is already LOS-smoothed inside _run_pathfinder; we only
+        # apply a sub-pixel Douglas-Peucker pass to drop strictly collinear
+        # vertices.  tolerance=1 (one pixel) keeps every bend that has any
+        # geometric meaning at the current raster resolution.
+        simplified_path = pathfinder.simplify_path(path_result['path'], tolerance=1)
         simplified_coords = pathfinder.path_to_coordinates(simplified_path, bounds, resolution_m)
 
         validator = EngineeringValidator(current_app.config)
@@ -1286,11 +1293,12 @@ def _normalize_ahp_weights_for_cost_surface(weights):
     Translate frontend slider keys to the keys that
     CostSurfaceGenerator.generate_composite_cost_surface actually consumes.
 
-    The UI exposes 8 sliders (protected_areas, rivers, wetlands, roads,
-    elevation, lakes, settlements, land_use) but the backend cost-surface
-    code groups some of those under broader categories:
+    The UI exposes 9 sliders (protected_areas, rivers, wetlands, roads,
+    elevation, lakes, settlements, land_use, transmission_lines) but the backend
+    cost-surface code groups some of those under broader categories:
         elevation               -> topography
         rivers, lakes, wetlands -> water   (summed)
+        transmission_lines      -> power_infrastructure
     All other keys pass through unchanged so config-level AHP weights
     (vegetation, public_infrastructure, cultural_heritage, ...) still work.
     """
@@ -1301,6 +1309,7 @@ def _normalize_ahp_weights_for_cost_surface(weights):
         'rivers': 'water',
         'lakes': 'water',
         'wetlands': 'water',
+        'transmission_lines': 'power_infrastructure',
     }
     normalized = {}
     for key, value in weights.items():
