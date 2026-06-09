@@ -190,7 +190,7 @@ class Config:
         'installation_per_km': 120000,   # USD per km (includes labor, equipment)
 
         # Right-of-Way acquisition (per km)
-        'row_acquisition_per_km': 50000, # USD per km (average for Uganda)
+        'row_acquisition_per_km': 37000, # USD per km (average for Uganda)
 
         # Engineering and design (percentage of total)
         'engineering_percentage': 0.08,  # 8% of construction cost
