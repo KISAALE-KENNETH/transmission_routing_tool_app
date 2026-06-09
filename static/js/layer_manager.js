@@ -15,7 +15,8 @@ let gisLayers = {
     settlements: null,
     hospitals: null,
     commercial: null,
-    land_use: null
+    land_use: null,
+    planned_routes: null
 };
 
 /**
@@ -62,6 +63,11 @@ function initLayerCheckboxes() {
     
     document.getElementById('showSubstations')?.addEventListener('change', function() {
         toggleLayer('substations', this.checked);
+    });
+    
+    // Planned Routes
+    document.getElementById('showPlannedRoutes')?.addEventListener('change', function() {
+        toggleLayer('planned_routes', this.checked);
     });
     
     // Settlements & Facilities
@@ -179,6 +185,10 @@ function createGISLayer(layerName) {
         'substations': {
             style: { radius: 8, fillColor: '#FF6600', color: '#CC0000', weight: 2, fillOpacity: 0.9 },
             popupPrefix: 'Substation'
+        },
+        'planned_routes': {
+            style: { color: '#9C27B0', weight: 4, opacity: 0.9, dashArray: '8, 4' },
+            popupPrefix: 'Planned Route'
         }
     };
     

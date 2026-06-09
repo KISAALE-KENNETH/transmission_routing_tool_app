@@ -208,6 +208,16 @@
                     </div>
                 </div>
                 
+                <div class="sidebar-section" id="savedRoutesSection">
+                    <h3>🗂️ Saved Routes (Compare)</h3>
+                    <p class="help-text" style="font-size:11px;">Each successful run is auto-saved. Tick a route to overlay it on the map in its color — useful for comparing alternative options side-by-side.</p>
+                    <div id="savedRoutesList"></div>
+                    <div style="display:flex; gap:6px; margin-top:8px;">
+                        <button id="fitSavedRoutesBtn" class="btn btn-secondary" style="flex:1; font-size:11px; padding:6px;">Zoom to visible</button>
+                        <button id="clearSavedRoutesBtn" class="btn btn-secondary" style="flex:1; font-size:11px; padding:6px;">Clear all</button>
+                    </div>
+                </div>
+
                 <div class="sidebar-section" id="resultsSection" style="display: none;">
                     <h3>📊 Route Analysis</h3>
                     <div id="routeMetrics"></div>
@@ -345,6 +355,10 @@
                                 <input type="checkbox" id="showSubstations" style="margin-right: 6px;">
                                 <span>🔌 Substations</span>
                             </label>
+                            <label class="layer-option" style="display: flex; align-items: center; padding: 3px 0; cursor: pointer; font-size: 11px;">
+                                <input type="checkbox" id="showPlannedRoutes" style="margin-right: 6px;">
+                                <span>📍 Planned Routes (Option 2)</span>
+                            </label>
                         </div>
                         
                         <div class="layer-category" style="margin-bottom: 8px;">
@@ -393,6 +407,7 @@
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/map.js') }}?v={{ range(1, 10000) | random }}"></script>
     <script src="{{ url_for('static', filename='js/optimize.js') }}?v={{ range(1, 10000) | random }}"></script>
+    <script src="{{ url_for('static', filename='js/route_compare.js') }}?v={{ range(1, 10000) | random }}"></script>
     <script src="{{ url_for('static', filename='js/qgis_tools.js') }}?v={{ range(1, 10000) | random }}"></script>
     <script src="{{ url_for('static', filename='js/layer_manager.js') }}?v={{ range(1, 10000) | random }}"></script>
     

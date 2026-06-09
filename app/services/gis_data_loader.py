@@ -176,6 +176,7 @@ def load_layers_for_bounds(
         ("power_infrastructure", "POWER_INFRASTRUCTURE_FOLDER"),
         ("airports", "AIRPORTS_FOLDER"),
         ("commercial_facilities", "COMMERCIAL_FACILITIES_FOLDER"),
+        ("planned_routes", "PLANNED_ROUTES_FOLDER"),
     ):
         folder = getattr(config, folder_attr, "")
         if not folder or not os.path.isdir(folder):

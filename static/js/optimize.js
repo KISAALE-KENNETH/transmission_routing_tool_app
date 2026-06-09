@@ -443,6 +443,17 @@ async function optimizeRoute() {
         // --- 6. Update map and UI with fresh results ---
         displayRoute(result.route, []);
 
+        // Auto-save this run into the comparison panel so it can be
+        // toggled back on later and superimposed on subsequent routes.
+        if (window.RouteCompare && result.route) {
+            window.RouteCompare.save(result.route, {
+                algorithm: result.algorithm_used || algorithm,
+                length_km: result.cost_breakdown?.total_length_km,
+                total_cost: result.cost_breakdown?.total_cost,
+                cost_per_km: result.cost_breakdown?.cost_per_km
+            });
+        }
+
         try {
             displayResults(result);
         } catch (displayError) {

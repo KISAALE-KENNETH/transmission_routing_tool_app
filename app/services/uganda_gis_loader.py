@@ -71,11 +71,12 @@ class UgandaGISLoader:
             'uganda_districts': getattr(self.config, 'UGANDA_DISTRICTS_FOLDER', None),
             'transmission_lines': getattr(self.config, 'TRANSMISSION_LINES_FOLDER', None),  # UETCL transmission lines
             'substations': getattr(self.config, 'SUBSTATIONS_FOLDER', None),  # UETCL substations
+            'planned_routes': getattr(self.config, 'PLANNED_ROUTES_FOLDER', None),  # Planned transmission routes
         }
         
         folder = folder_map.get(layer_name)
         if not folder or not os.path.isdir(folder):
-            print(f"⚠️ Folder not found for layer '{layer_name}': {folder}")
+            print(f"[WARN] Folder not found for layer '{layer_name}': {folder}")
             return None
         
         # IMPORTANT: Load ONLY shapefiles (.shp) from the folder
@@ -84,10 +85,10 @@ class UgandaGISLoader:
             if filename.lower().endswith('.shp'):
                 filepath = os.path.join(folder, filename)
                 try:
-                    print(f"📁 Loading shapefile for '{layer_name}': {filename}")
+                    print(f"[LOAD] Loading shapefile for '{layer_name}': {filename}")
                     return self._load_shapefile_as_geojson(filepath)
                 except Exception as e:
-                    print(f"❌ Error loading shapefile {filepath}: {e}")
+                    print(f"[ERROR] Error loading shapefile {filepath}: {e}")
                     continue
         
         # If no shapefile found, try GeoJSON as fallback
@@ -95,14 +96,14 @@ class UgandaGISLoader:
             if filename.lower().endswith(('.geojson', '.json')):
                 filepath = os.path.join(folder, filename)
                 try:
-                    print(f"📁 Loading GeoJSON fallback for '{layer_name}': {filename}")
+                    print(f"[LOAD] Loading GeoJSON fallback for '{layer_name}': {filename}")
                     with open(filepath, 'r', encoding='utf-8') as f:
                         return json.load(f)
                 except Exception as e:
-                    print(f"❌ Error loading GeoJSON {filepath}: {e}")
+                    print(f"[ERROR] Error loading GeoJSON {filepath}: {e}")
                     continue
         
-        print(f"⚠️ No shapefile or GeoJSON found for layer '{layer_name}' in {folder}")
+        print(f"[WARN] No shapefile or GeoJSON found for layer '{layer_name}' in {folder}")
         return None
     
     def _load_shapefile_as_geojson(self, shapefile_path: str) -> Optional[Dict]:
@@ -111,28 +112,28 @@ class UgandaGISLoader:
             import geopandas as gpd
             import pandas as pd
             
-            print(f"✓ Reading shapefile: {shapefile_path}")
+            print(f"[OK] Reading shapefile: {shapefile_path}")
             
             # Read shapefile
             gdf = gpd.read_file(shapefile_path)
-            print(f"  → Loaded {len(gdf)} features")
+            print(f"  [OK] Loaded {len(gdf)} features")
             
             # Convert to WGS84 if needed
             if gdf.crs and gdf.crs.to_string() != 'EPSG:4326':
-                print(f"  → Converting CRS from {gdf.crs.to_string()} to EPSG:4326")
+                print(f"  [INFO] Converting CRS from {gdf.crs.to_string()} to EPSG:4326")
                 gdf = gdf.to_crs(epsg=4326)
             
             # Convert datetime/timestamp columns to strings for JSON serialization
             for col in gdf.columns:
                 if col != 'geometry':
                     if pd.api.types.is_datetime64_any_dtype(gdf[col]):
-                        print(f"  → Converting datetime column '{col}' to string")
+                        print(f"  [INFO] Converting datetime column '{col}' to string")
                         gdf[col] = gdf[col].astype(str)
                     # Also handle pandas Timestamp objects
                     elif gdf[col].dtype == 'object':
                         try:
                             if any(isinstance(x, pd.Timestamp) for x in gdf[col].dropna().head()):
-                                print(f"  → Converting Timestamp column '{col}' to string")
+                                print(f"  [INFO] Converting Timestamp column '{col}' to string")
                                 gdf[col] = gdf[col].apply(lambda x: str(x) if pd.notna(x) else None)
                         except:
                             pass
@@ -140,26 +141,26 @@ class UgandaGISLoader:
             # For VERY large datasets (>100K features), sample to prevent memory errors
             if len(gdf) > 100000:
                 sample_size = min(50000, len(gdf))
-                print(f"  ⚠️ Large dataset detected ({len(gdf)} features). Sampling {sample_size} features for performance")
+                print(f"  [INFO] Large dataset detected ({len(gdf)} features). Sampling {sample_size} features for performance")
                 gdf = gdf.sample(n=sample_size, random_state=42)
-                print(f"  → Sampled to {len(gdf)} features")
+                print(f"  [OK] Sampled to {len(gdf)} features")
             
             # Simplify geometry for large datasets to reduce file size
             # This preserves visual appearance but reduces coordinate precision
             if len(gdf) > 1000:
                 # Simplify with 0.0001 degree tolerance (~10 meters)
                 gdf['geometry'] = gdf['geometry'].simplify(0.0001)
-                print(f"  → Simplified geometry for {len(gdf)} features")
+                print(f"  [OK] Simplified geometry for {len(gdf)} features")
             
             # Convert to GeoJSON with reduced coordinate precision (6 decimals = ~0.1m)
             geojson_str = gdf.to_json(show_bbox=False)
             geojson = json.loads(geojson_str)
             
-            print(f"✓ Successfully converted to GeoJSON: {len(geojson['features'])} features")
+            print(f"[OK] Successfully converted to GeoJSON: {len(geojson['features'])} features")
             return geojson
             
         except Exception as e:
-            print(f"❌ Failed to load shapefile {shapefile_path}: {e}")
+            print(f"[ERROR] Failed to load shapefile {shapefile_path}: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -193,11 +194,12 @@ class UgandaGISLoader:
         
         # Recursively check coordinates
         if isinstance(coords, (list, tuple)):
-            if len(coords) == 2 and isinstance(coords[0], (int, float)):
-                # It's a point [lon, lat]
+            # Check if it's a point: first element is a number (handles both 2D [lon, lat] and 3D [lon, lat, alt])
+            if len(coords) >= 2 and isinstance(coords[0], (int, float)):
+                # It's a point [lon, lat] or [lon, lat, alt]
                 return check_point(coords[0], coords[1])
             else:
-                # It's nested
+                # It's nested (list of points or list of lists)
                 return any(self._intersects_bounds(c, bounds) for c in coords)
         
         return False

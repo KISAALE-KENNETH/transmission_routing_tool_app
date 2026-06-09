@@ -65,6 +65,9 @@ class Config:
     TRANSMISSION_LINES_FOLDER = os.path.join(DATA_FOLDER, 'transmission_lines')  # Existing transmission lines
     SUBSTATIONS_FOLDER = os.path.join(DATA_FOLDER, 'substations')  # UETCL substations
     
+    # Planned Routes Layer
+    PLANNED_ROUTES_FOLDER = os.path.join(DATA_FOLDER, 'planned_routes')  # Planned transmission routes
+    
     # Case Study: Olwiyo - South Sudan Line Specifications
     VOLTAGE_LEVEL = 400  # kV
     TOWER_TYPE = 'lattice'  # Steel lattice towers

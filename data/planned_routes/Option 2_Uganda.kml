@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document id="root_doc">
+<Schema name="option_2_uganda" id="option_2_uganda">
+	<SimpleField name="descriptio" type="string"></SimpleField>
+	<SimpleField name="timestamp" type="string"></SimpleField>
+	<SimpleField name="begin" type="string"></SimpleField>
+	<SimpleField name="end" type="string"></SimpleField>
+	<SimpleField name="altitudeMo" type="string"></SimpleField>
+	<SimpleField name="tessellate" type="float"></SimpleField>
+	<SimpleField name="extrude" type="float"></SimpleField>
+	<SimpleField name="visibility" type="float"></SimpleField>
+	<SimpleField name="drawOrder" type="float"></SimpleField>
+	<SimpleField name="icon" type="string"></SimpleField>
+</Schema>
+<Folder><name>option_2_uganda</name>
+  <Placemark>
+	<name>Olwiyo-Nimule</name>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#option_2_uganda">
+		<SimpleData name="descriptio">&lt;html xmlns:fo=&quot;http://www.w3.org/1999/XSL/Format&quot; xmlns:msxsl=&quot;urn:schemas-microsoft-com:xslt&quot;&gt;
+
+&lt;head&gt;
+
+&lt;META http-equiv=&quot;Content-Type&quot; content=&quot;text/html&quot;&gt;
+
+&lt;meta http-equiv=&quot;content-type&quot; content=&quot;text/html; charset=UTF-8&quot;&gt;
+
+&lt;/head&gt;
+
+&lt;body style=&quot;mar</SimpleData>
+		<SimpleData name="tessellate">1</SimpleData>
+		<SimpleData name="extrude">0</SimpleData>
+		<SimpleData name="visibility">-1</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>32.2547748385198,3.62830876133957,0 32.2252040503619,3.51433010349921,0 32.0912502314167,3.44799930360595,0 32.066646686499,3.41374305492337,0 32.0821301093783,3.35293139849596,0 32.1081603289924,3.29999970380426,0 32.1174793791155,3.24959215109358,0 32.1492088680292,3.18554147272293,0 32.1567034953559,3.0573906127343,0 32.1320743966597,3.00309993322719,0 32.1319048335917,2.94327386836606,0 32.1615905518192,2.83451859811247,0 32.149508464984,2.74330798536048,0 32.1494976709927,2.74330628150353,0 32.1494956846147,2.74330127668272,0 32.1494975751973,2.74329798886908,0 32.1494923809118,2.74329798515792,0 32.1494927861319,2.74329869194836,0 32.1494949769891,2.74329949499873,0 32.1494956846147,2.74330127668272,0 32.1494976709927,2.74330628150353,0 32.149508464984,2.74330798536048,0 32.0742774414882,2.71572192518048,0 32.0742725847626,2.7157219214414,0 31.9206490767857,2.61310034972987,0 31.900615782741,2.57094840709093,0 31.8990533977357,2.56766317654786,0 31.8990507053291,2.56765639012412,0 31.8990487192293,2.56765138536237,0 31.8990480129225,2.5676496037004,0 31.8990475033514,2.56764809538156,0 31.890235637936,2.54155101713906,0 31.890234997396,2.54154911975832,0 31.8902354456769,2.54154761317642,0 31.8911239836032,2.53856044226535,0 31.8911219791626,2.53855694447589,0 31.8911239245259,2.53855694615324,0 31.8908674628492,2.5379619541347,0 31.8906103488749,2.53736846766561,0 31.890607756217,2.53736394271264,0 31.8906107061869,2.53736394525619,0 31.8910486090941,2.53550530283803,0 31.8910484305003,2.535504853126,0 31.8913191742829,2.53537214729193,0</coordinates></LineString></MultiGeometry>
+  </Placemark>
+</Folder>
+</Document></kml>

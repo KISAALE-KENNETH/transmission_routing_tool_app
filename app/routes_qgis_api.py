@@ -52,6 +52,7 @@ _LAYER_FOLDER_CONFIG_KEYS = {
     'roads': 'ROADS_FOLDER',
     'transmission_lines': 'TRANSMISSION_LINES_FOLDER',
     'substations': 'SUBSTATIONS_FOLDER',
+    'planned_routes': 'PLANNED_ROUTES_FOLDER',
 }
 
 
