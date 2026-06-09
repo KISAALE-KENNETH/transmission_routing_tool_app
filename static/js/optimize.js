@@ -4,14 +4,15 @@
 
 // AHP weights state - matching cost surface layers (MUST sum to 1.0)
 let ahpWeights = {
-    protected_areas: 0.15,   // Protected Areas
-    rivers: 0.15,            // Rivers
-    wetlands: 0.10,          // Wetlands
-    roads: 0.10,             // Roads
-    elevation: 0.15,         // Elevation
-    lakes: 0.10,             // Lakes
-    settlements: 0.15,       // Settlements (Schools)
-    land_use: 0.10           // Land Use
+    protected_areas: 0.15,      // Protected Areas
+    rivers: 0.12,               // Rivers
+    wetlands: 0.10,             // Wetlands
+    roads: 0.08,                // Roads
+    elevation: 0.15,            // Elevation
+    lakes: 0.10,                // Lakes
+    settlements: 0.12,          // Settlements (Schools)
+    land_use: 0.08,             // Land Use
+    transmission_lines: 0.10    // Existing Transmission Lines
 };
 
 // Waypoints array
@@ -22,16 +23,16 @@ let waypoints = [];
  * Resets ALL state — map layers, UI panels, cached project ID.
  */
 function clearPreviousRoute() {
-    // Remove route layer from map
-    if (window.routeLayer) {
-        map.removeLayer(window.routeLayer);
-        window.routeLayer = null;
+    // Remove route layer from map (routeLayer is module-scope in map.js)
+    if (typeof routeLayer !== 'undefined' && routeLayer) {
+        map.removeLayer(routeLayer);
+        routeLayer = null;
     }
 
-    // Remove tower markers
-    if (window.towerMarkers) {
-        window.towerMarkers.forEach(marker => map.removeLayer(marker));
-        window.towerMarkers = [];
+    // Remove tower markers (towerMarkers is module-scope in map.js)
+    if (typeof towerMarkers !== 'undefined' && towerMarkers && towerMarkers.length) {
+        towerMarkers.forEach(marker => map.removeLayer(marker));
+        towerMarkers.length = 0;
     }
 
     // Clear route analysis results (hide section but preserve DOM structure)
@@ -131,35 +132,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Generate towers button
     document.getElementById('generateTowersBtn')?.addEventListener('click', generateTowers);
     
-    // Generate Cost Surface button
-    document.getElementById('generateCostSurfaceBtn')?.addEventListener('click', generateCostSurface);
-    
-    // Auto-update cost surface when weights change (with debounce)
-    let costSurfaceUpdateTimeout;
-    Object.keys(ahpWeights).forEach(key => {
-        const sliderId = key + 'Weight';
-        const slider = document.getElementById(sliderId);
-        if (slider) {
-            slider.addEventListener('input', function() {
-                if (costSurfaceUpdateTimeout) clearTimeout(costSurfaceUpdateTimeout);
-                costSurfaceUpdateTimeout = setTimeout(() => {
-                    if (document.getElementById('costSurfaceLegend').style.display === 'block') {
-                        generateCostSurface();
-                    }
-                }, 1000);
-            });
-        }
-    });
-
     // Export buttons
     document.getElementById('exportBtn')?.addEventListener('click', () => exportRoute('geojson'));
     document.getElementById('exportXyzBtn')?.addEventListener('click', () => exportRoute('xyz'));
 
     // View corridor button
     document.getElementById('viewCorridorBtn')?.addEventListener('click', viewCorridor);
-
-    // View cost surface button
-    document.getElementById('viewCostSurfaceBtn')?.addEventListener('click', viewCostSurface);
 
     // Add waypoint button
     document.getElementById('addWaypointBtn')?.addEventListener('click', addWaypoint);
@@ -179,7 +157,8 @@ function setupWeightSliders() {
         elevation: document.getElementById('elevationWeight'),
         lakes: document.getElementById('lakesWeight'),
         settlements: document.getElementById('settlementsWeight'),
-        land_use: document.getElementById('landUseWeight')
+        land_use: document.getElementById('landUseWeight'),
+        transmission_lines: document.getElementById('transmissionLinesWeight')
     };
 
     const values = {
@@ -190,7 +169,8 @@ function setupWeightSliders() {
         elevation: document.getElementById('elevationValue'),
         lakes: document.getElementById('lakesValue'),
         settlements: document.getElementById('settlementsValue'),
-        land_use: document.getElementById('landUseValue')
+        land_use: document.getElementById('landUseValue'),
+        transmission_lines: document.getElementById('transmissionLinesValue')
     };
 
     // Update weights when sliders change
@@ -1341,92 +1321,6 @@ async function viewCorridor() {
 }
 
 /**
- * View cost surface as overlay on map
- */
-async function viewCostSurface() {
-    if (!currentProject.projectId) {
-        alert('No project available. Optimize a route first.');
-        return;
-    }
-    
-    try {
-        const btn = document.getElementById('viewCostSurfaceBtn');
-        const originalText = btn.textContent;
-        btn.textContent = 'Loading...';
-        btn.disabled = true;
-        
-        const response = await fetch(`/api/projects/${currentProject.projectId}/cost-surface-image`);
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to load cost surface');
-        }
-
-        // Read bounds from response headers (no extra API call needed)
-        const minLon = parseFloat(response.headers.get('X-Bounds-Min-Lon'));
-        const minLat = parseFloat(response.headers.get('X-Bounds-Min-Lat'));
-        const maxLon = parseFloat(response.headers.get('X-Bounds-Max-Lon'));
-        const maxLat = parseFloat(response.headers.get('X-Bounds-Max-Lat'));
-        const costMin = response.headers.get('X-Cost-Min');
-        const costMax = response.headers.get('X-Cost-Max');
-
-        const blob = await response.blob();
-        const imageUrl = URL.createObjectURL(blob);
-        
-        if (window.costSurfaceLayer) {
-            map.removeLayer(window.costSurfaceLayer);
-        }
-        
-        const imgBounds = [
-            [minLat, minLon],
-            [maxLat, maxLon]
-        ];
-
-        window.costSurfaceLayer = L.imageOverlay(imageUrl, imgBounds, {
-            opacity: 0.65,
-            interactive: false
-        }).addTo(map);
-
-        window.costSurfaceLayer.on('load', function() {
-            const el = window.costSurfaceLayer.getElement();
-            if (el) {
-                el.style.imageRendering = 'pixelated';
-                el.style.imageRendering = 'crisp-edges';
-            }
-        });
-        
-        window.costSurfaceLayer.bringToFront();
-        
-        if (window.layerControl) {
-            window.layerControl.addOverlay(window.costSurfaceLayer, '🔥 Cost Surface (Heatmap)');
-        }
-
-        // Show legend
-        const legend = document.getElementById('costSurfaceLegend');
-        if (legend) legend.style.display = 'block';
-
-        const infoText = document.getElementById('costSurfaceInfo');
-        if (infoText) {
-            infoText.innerHTML = `
-                <strong>Cost Surface (post-optimization):</strong><br>
-                Min: ${costMin} | Max: ${costMax}<br>
-                <small>Green = low cost · Red = high cost</small>
-            `;
-        }
-
-        map.fitBounds(imgBounds);
-        
-    } catch (error) {
-        console.error('Cost surface error:', error);
-        alert('Error: ' + error.message);
-    } finally {
-        const btn = document.getElementById('viewCostSurfaceBtn');
-        btn.textContent = 'View Cost Surface';
-        btn.disabled = false;
-    }
-}
-
-/**
  * Build a dynamic QGIS-style legend from API classification data.
  * @param {Array} entries  - array of {label, color, min, max, class} from API
  * @param {string} containerId - DOM id to populate
@@ -1439,240 +1333,5 @@ function buildDynamicLegend(entries, containerId) {
             <div style="width:22px; height:16px; background:${e.color}; border:1px solid rgba(0,0,0,0.25); flex-shrink:0;"></div>
             <span style="font-size:10px; color:#222;">${e.label}</span>
         </div>`).join('');
-}
-
-/**
- * Remove cost surface overlay from map and hide legend
- */
-function removeCostSurface() {
-    if (window.costSurfacePreviewLayer) {
-        map.removeLayer(window.costSurfacePreviewLayer);
-        window.costSurfacePreviewLayer = null;
-    }
-    if (window.costSurfaceRouteLayer) {
-        map.removeLayer(window.costSurfaceRouteLayer);
-        window.costSurfaceRouteLayer = null;
-    }
-    const legend = document.getElementById('costSurfaceLegend');
-    if (legend) legend.style.display = 'none';
-    const mapLegendPanel = document.getElementById('mapLegendPanel');
-    if (mapLegendPanel) mapLegendPanel.style.display = 'none';
-    const northArrow = document.getElementById('northArrow');
-    if (northArrow) northArrow.style.display = 'none';
-    const mapComp = document.getElementById('mapComposition');
-    if (mapComp) mapComp.style.display = 'none';
-    console.log('✓ Cost surface removed from map');
-}
-
-/**
- * Generate cost surface with current weights (without route optimization)
- */
-async function generateCostSurface() {
-    try {
-        // Show loading
-        const btn = document.getElementById('generateCostSurfaceBtn');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '⏳ Generating Cost Surface...';
-        btn.disabled = true;
-        
-        console.log('🎨 Generating cost surface with user-selected layers and weights...');
-        
-        // Build bounds: use start/end points if set (study area), else current view
-        let boundsArray;
-        if (currentProject.start && currentProject.end) {
-            // Expand a margin around the start-end corridor (like QGIS study area)
-            const latMin = Math.min(currentProject.start.lat, currentProject.end.lat);
-            const latMax = Math.max(currentProject.start.lat, currentProject.end.lat);
-            const lonMin = Math.min(currentProject.start.lon, currentProject.end.lon);
-            const lonMax = Math.max(currentProject.start.lon, currentProject.end.lon);
-            const latSpan = latMax - latMin;
-            const lonSpan = lonMax - lonMin;
-            const margin = Math.max(0.1, Math.max(latSpan, lonSpan) * 0.25);
-            boundsArray = [
-                lonMin - margin,
-                latMin - margin,
-                lonMax + margin,
-                latMax + margin
-            ];
-            console.log('📐 Using start/end corridor bounds:', boundsArray);
-        } else {
-            // Fall back to current map view
-            const b = map.getBounds();
-            boundsArray = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
-            console.log('📐 Using map view bounds:', boundsArray);
-        }
-        
-        // Build layers configuration from checkboxes and sliders
-        const layersConfig = {
-            protected_areas: {
-                enabled: document.getElementById('showProtectedAreas')?.checked || false,
-                weight: ahpWeights.protected_areas || 0
-            },
-            rivers: {
-                enabled: document.getElementById('showRivers')?.checked || false,
-                weight: ahpWeights.rivers || 0
-            },
-            wetlands: {
-                enabled: document.getElementById('showWetlands')?.checked || false,
-                weight: ahpWeights.wetlands || 0
-            },
-            roads: {
-                enabled: document.getElementById('showRoads')?.checked || false,
-                weight: ahpWeights.roads || 0
-            },
-            elevation: {
-                enabled: document.getElementById('showElevation')?.checked || false,
-                weight: ahpWeights.elevation || 0
-            },
-            lakes: {
-                enabled: document.getElementById('showLakes')?.checked || false,
-                weight: ahpWeights.lakes || 0
-            },
-            settlements: {
-                enabled: document.getElementById('showSettlements')?.checked || false,
-                weight: ahpWeights.settlements || 0
-            },
-            land_use: {
-                enabled: document.getElementById('showLandUse')?.checked || false,
-                weight: ahpWeights.land_use || 0
-            }
-        };
-        
-        // Count enabled layers
-        const enabledCount = Object.values(layersConfig).filter(l => l.enabled).length;
-        console.log(`📊 Enabled layers: ${enabledCount}/8`);
-        console.log('📋 Layers config:', layersConfig);
-        
-        if (enabledCount === 0) {
-            alert('Please check at least one layer checkbox to generate the cost surface.');
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            return;
-        }
-        
-        // Call API to generate cost surface
-        const response = await fetch('/api/cost-surface/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                layers: layersConfig,
-                bounds: boundsArray,
-                resolution_m: 100,   // 100m for fast preview; real data files use their native resolution
-                classification: 'quantile',  // Always use quantile classification
-                n_classes: 5,                // Always use 5 classes
-                start_point: currentProject.start ? { lat: currentProject.start.lat, lon: currentProject.start.lon } : null,
-                end_point:   currentProject.end   ? { lat: currentProject.end.lat,   lon: currentProject.end.lon   } : null,
-            })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to generate cost surface');
-        }
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Failed to generate cost surface');
-        }
-        
-        console.log('✅ Cost surface generated successfully:', result.metadata);
-        
-        // Remove existing cost surface layer if any
-        if (window.costSurfacePreviewLayer) {
-            map.removeLayer(window.costSurfacePreviewLayer);
-        }
-        
-        const imageUrl = `data:image/png;base64,${result.image_base64}`;
-        const metadata = result.metadata;
-        const imgBounds = [
-            [result.bounds[1], result.bounds[0]],
-            [result.bounds[3], result.bounds[2]]
-        ];
-        
-        window.costSurfacePreviewLayer = L.imageOverlay(imageUrl, imgBounds, {
-            opacity: 0.6,
-            interactive: false
-        }).addTo(map);
-
-        // Apply pixelated rendering once the image element exists
-        window.costSurfacePreviewLayer.on('load', function() {
-            const el = window.costSurfacePreviewLayer.getElement();
-            if (el) {
-                el.style.imageRendering = 'pixelated';
-                el.style.imageRendering = 'crisp-edges';
-            }
-        });
-
-        // Zoom map to the cost surface area
-        map.fitBounds(imgBounds, { padding: [20, 20] });
-
-        // --- Build dynamic legend from API classification data ---
-        const legend = document.getElementById('costSurfaceLegend');
-        const isFirstRender = legend.style.display !== 'block';
-        legend.style.display = 'block';
-
-        if (result.legend && result.legend.length) {
-            buildDynamicLegend(result.legend, 'legendEntries');
-            buildDynamicLegend(result.legend, 'mapLegendEntries');
-        }
-
-        // Show QGIS map composition elements
-        const mapComp = document.getElementById('mapComposition');
-        const northArrow = document.getElementById('northArrow');
-        const mapLegendPanel = document.getElementById('mapLegendPanel');
-        if (mapComp) mapComp.style.display = 'block';
-        if (northArrow) northArrow.style.display = 'block';
-        if (mapLegendPanel) mapLegendPanel.style.display = 'block';
-
-        // --- Render route overlay (blue polyline) if returned by API ---
-        if (window.costSurfaceRouteLayer) {
-            map.removeLayer(window.costSurfaceRouteLayer);
-            window.costSurfaceRouteLayer = null;
-        }
-        if (result.route && result.route.geometry && result.route.geometry.coordinates.length > 1) {
-            window.costSurfaceRouteLayer = L.geoJSON(result.route, {
-                style: {
-                    color: '#1565c0',
-                    weight: 3,
-                    opacity: 0.95,
-                    lineJoin: 'round',
-                    lineCap: 'round',
-                }
-            }).addTo(map);
-            window.costSurfaceRouteLayer.bringToFront();
-        }
-
-        // Update stats info
-        const infoText = document.getElementById('costSurfaceInfo');
-        const cls = result.classification || {};
-        const enabledLayersList = Object.entries(layersConfig)
-            .filter(([_, c]) => c.enabled).map(([n]) => n).join(', ');
-        if (infoText) {
-            const tifLink = result.geotiff_url
-                ? `<br><a href="${result.geotiff_url}" download style="font-size:9px; color:#1565c0;">⬇ Download GeoTIFF</a>`
-                : '';
-            infoText.innerHTML =
-                `<strong>Classification:</strong> ${cls.method || ''} · ${cls.n_classes || ''} classes<br>` +
-                `Range: ${(cls.global_min || 0).toFixed(2)} – ${(cls.global_max || 0).toFixed(2)}<br>` +
-                `Layers: ${enabledLayersList}<br>` +
-                `Res: ${metadata.resolution_m}m · ${metadata.data_source} · ${metadata.generation_time_s}s` +
-                tifLink;
-        }
-
-        // Store GeoTIFF URL for external access
-        window.lastCostSurfaceGeoTIFF = result.geotiff_url || null;
-
-        console.log('✅ Cost surface displayed on map');
-        if (result.geotiff_url) console.log('📁 GeoTIFF saved:', result.geotiff_url);
-        
-    } catch (error) {
-        console.error('❌ Cost surface generation error:', error);
-        alert('Error generating cost surface: ' + error.message);
-    } finally {
-        const btn = document.getElementById('generateCostSurfaceBtn');
-        btn.innerHTML = '🎨 Generate Cost Surface / Suitability Map';
-        btn.disabled = false;
-    }
 }
 

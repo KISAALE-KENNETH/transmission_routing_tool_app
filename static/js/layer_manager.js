@@ -55,6 +55,15 @@ function initLayerCheckboxes() {
         toggleLayer('elevation', this.checked);
     });
     
+    // Power Infrastructure (UETCL)
+    document.getElementById('showTransmissionLines')?.addEventListener('change', function() {
+        toggleLayer('transmission_lines', this.checked);
+    });
+    
+    document.getElementById('showSubstations')?.addEventListener('change', function() {
+        toggleLayer('substations', this.checked);
+    });
+    
     // Settlements & Facilities
     document.getElementById('showSettlements')?.addEventListener('change', function() {
         toggleLayer('settlements', this.checked);
@@ -162,6 +171,14 @@ function createGISLayer(layerName) {
         'land_use': {
             style: { color: '#8B4513', fillColor: '#DEB887', fillOpacity: 0.2, weight: 1 },
             popupPrefix: 'Land Use'
+        },
+        'transmission_lines': {
+            style: { color: '#FF0000', weight: 3, opacity: 0.8, dashArray: '10, 5' },
+            popupPrefix: 'Transmission Line'
+        },
+        'substations': {
+            style: { radius: 8, fillColor: '#FF6600', color: '#CC0000', weight: 2, fillOpacity: 0.9 },
+            popupPrefix: 'Substation'
         }
     };
     

@@ -50,6 +50,8 @@ _LAYER_FOLDER_CONFIG_KEYS = {
     'elevation': 'ELEVATION_FOLDER',
     'settlements': 'SCHOOLS_FOLDER',
     'roads': 'ROADS_FOLDER',
+    'transmission_lines': 'TRANSMISSION_LINES_FOLDER',
+    'substations': 'SUBSTATIONS_FOLDER',
 }
 
 

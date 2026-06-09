@@ -69,6 +69,8 @@ class UgandaGISLoader:
             'elevation': getattr(self.config, 'ELEVATION_FOLDER', None),
             'land_use': getattr(self.config, 'LAND_USE_FOLDER', None),
             'uganda_districts': getattr(self.config, 'UGANDA_DISTRICTS_FOLDER', None),
+            'transmission_lines': getattr(self.config, 'TRANSMISSION_LINES_FOLDER', None),  # UETCL transmission lines
+            'substations': getattr(self.config, 'SUBSTATIONS_FOLDER', None),  # UETCL substations
         }
         
         folder = folder_map.get(layer_name)
@@ -107,6 +109,7 @@ class UgandaGISLoader:
         """Convert shapefile to GeoJSON format using geopandas"""
         try:
             import geopandas as gpd
+            import pandas as pd
             
             print(f"✓ Reading shapefile: {shapefile_path}")
             
@@ -118,6 +121,21 @@ class UgandaGISLoader:
             if gdf.crs and gdf.crs.to_string() != 'EPSG:4326':
                 print(f"  → Converting CRS from {gdf.crs.to_string()} to EPSG:4326")
                 gdf = gdf.to_crs(epsg=4326)
+            
+            # Convert datetime/timestamp columns to strings for JSON serialization
+            for col in gdf.columns:
+                if col != 'geometry':
+                    if pd.api.types.is_datetime64_any_dtype(gdf[col]):
+                        print(f"  → Converting datetime column '{col}' to string")
+                        gdf[col] = gdf[col].astype(str)
+                    # Also handle pandas Timestamp objects
+                    elif gdf[col].dtype == 'object':
+                        try:
+                            if any(isinstance(x, pd.Timestamp) for x in gdf[col].dropna().head()):
+                                print(f"  → Converting Timestamp column '{col}' to string")
+                                gdf[col] = gdf[col].apply(lambda x: str(x) if pd.notna(x) else None)
+                        except:
+                            pass
             
             # For VERY large datasets (>100K features), sample to prevent memory errors
             if len(gdf) > 100000:

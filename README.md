@@ -2,8 +2,15 @@
 
 > **A web application to help plan 400kV transmission lines in Uganda**
 > 
-> Developed for: Uganda Electricity Transmission Company Limited (UETCL)
+> Developed for: Uganda Electricity Transmission Company Limited (UETCL)  
 > Case Study: Olwiyo (Uganda) to South Sudan Border 400kV Interconnection
+
+---
+
+## 📚 Documentation
+
+- **[STUDENT_GUIDE.md](STUDENT_GUIDE.md)** — **Start here for learning.** Full teaching guide for electrical engineering students: architecture, code walkthrough, data flow, FAQ, and glossary.
+- **[utilities/README.md](utilities/README.md)** — Optional one-time data download scripts
 
 ---
 

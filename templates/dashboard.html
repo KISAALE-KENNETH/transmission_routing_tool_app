@@ -140,9 +140,9 @@
                 </div>
 
                 <div class="sidebar-section">
-                    <h3>AHP Weights (Cost Surface Layers)</h3>
+                    <h3>AHP Weights (Route Optimization)</h3>
                     <p class="help-text">Adjust weights for cost factors (must sum to 1.0)<br>
-                    <small>Weights applied to generate cost surface</small></p>
+                    <small>Weights applied to route optimization</small></p>
 
                     <div class="weight-control">
                         <label>Protected Areas: <span id="protectedValue">0.15</span></label>
@@ -150,8 +150,8 @@
                     </div>
 
                     <div class="weight-control">
-                        <label>Rivers: <span id="riversValue">0.15</span></label>
-                        <input type="range" id="riversWeight" min="0" max="1" step="0.01" value="0.15">
+                        <label>Rivers: <span id="riversValue">0.12</span></label>
+                        <input type="range" id="riversWeight" min="0" max="1" step="0.01" value="0.12">
                     </div>
 
                     <div class="weight-control">
@@ -160,8 +160,8 @@
                     </div>
 
                     <div class="weight-control">
-                        <label>Roads: <span id="roadsValue">0.10</span></label>
-                        <input type="range" id="roadsWeight" min="0" max="1" step="0.01" value="0.10">
+                        <label>Roads: <span id="roadsValue">0.08</span></label>
+                        <input type="range" id="roadsWeight" min="0" max="1" step="0.01" value="0.08">
                     </div>
 
                     <div class="weight-control">
@@ -175,33 +175,18 @@
                     </div>
 
                     <div class="weight-control">
-                        <label>Settlements (Schools): <span id="settlementsValue">0.15</span></label>
-                        <input type="range" id="settlementsWeight" min="0" max="1" step="0.01" value="0.15">
+                        <label>Settlements (Schools): <span id="settlementsValue">0.12</span></label>
+                        <input type="range" id="settlementsWeight" min="0" max="1" step="0.01" value="0.12">
                     </div>
 
                     <div class="weight-control">
-                        <label>Land Use: <span id="landUseValue">0.10</span></label>
-                        <input type="range" id="landUseWeight" min="0" max="1" step="0.01" value="0.10">
+                        <label>Land Use: <span id="landUseValue">0.08</span></label>
+                        <input type="range" id="landUseWeight" min="0" max="1" step="0.01" value="0.08">
                     </div>
 
-                    <div style="margin-top: 15px;">
-                        <button id="generateCostSurfaceBtn" class="btn btn-primary" style="width: 100%; padding: 10px; font-size: 13px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
-                            🎨 Generate Cost Surface / Suitability Map
-                        </button>
-                        <p class="help-text" style="margin-top: 8px; font-size: 10px; text-align: center;">
-                            Click to generate cost surface with current weights
-                        </p>
-                    </div>
-
-                    <!-- Dynamic QGIS-style legend -->
-                    <div id="costSurfaceLegend" style="margin-top: 12px; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 5px; display: none; box-shadow: 0 1px 4px rgba(0,0,0,0.1);">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <p style="font-size: 11px; font-weight: 700; margin: 0; color: #222; letter-spacing: 0.3px;">COST</p>
-                            <button onclick="removeCostSurface()" title="Remove cost surface from map"
-                                    style="font-size:10px; padding:2px 7px; background:#dc3545; color:white; border:none; border-radius:3px; cursor:pointer;">✕ Remove</button>
-                        </div>
-                        <div id="legendEntries" style="display: flex; flex-direction: column; gap: 3px;"></div>
-                        <p id="costSurfaceInfo" style="margin-top: 8px; font-size: 9px; color: #888; line-height: 1.4;"></p>
+                    <div class="weight-control">
+                        <label>Transmission Lines: <span id="transmissionLinesValue">0.10</span></label>
+                        <input type="range" id="transmissionLinesWeight" min="0" max="1" step="0.01" value="0.10">
                     </div>
 
                     <div class="weight-sum">Total: <span id="weightSum">1.00</span></div>
@@ -247,7 +232,6 @@
                         <button id="exportBtn" class="btn btn-secondary">Export GeoJSON</button>
                         <button id="exportXyzBtn" class="btn btn-secondary">Export XYZ (E/N/Elev)</button>
                         <button id="viewCorridorBtn" class="btn btn-secondary">View Corridor</button>
-                        <button id="viewCostSurfaceBtn" class="btn btn-secondary">View Cost Surface</button>
                     </div>
                 </div>
             </aside>
@@ -259,7 +243,7 @@
                 <!-- QGIS-style map composition overlay -->
                 <div id="mapComposition" style="display:none; position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:1001; pointer-events:none;">
                     <div style="background:rgba(255,255,255,0.92); padding:6px 18px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.25); text-align:center;">
-                        <span id="mapTitle" style="font-size:14px; font-weight:700; color:#111; letter-spacing:0.5px;">COST SURFACE &amp; ROUTE</span>
+                        <span id="mapTitle" style="font-size:14px; font-weight:700; color:#111; letter-spacing:0.5px;">OPTIMIZED ROUTE</span>
                     </div>
                 </div>
 
@@ -348,6 +332,18 @@
                             <label class="layer-option" style="display: flex; align-items: center; padding: 3px 0; cursor: pointer; font-size: 11px;">
                                 <input type="checkbox" id="showElevation" style="margin-right: 6px;">
                                 <span>🏔️ Elevation (Contours)</span>
+                            </label>
+                        </div>
+                        
+                        <div class="layer-category" style="margin-bottom: 8px;">
+                            <p style="font-size: 9px; color: #666; margin: 0 0 4px 0; font-weight: 600;">POWER INFRASTRUCTURE (UETCL)</p>
+                            <label class="layer-option" style="display: flex; align-items: center; padding: 3px 0; cursor: pointer; font-size: 11px;">
+                                <input type="checkbox" id="showTransmissionLines" style="margin-right: 6px;">
+                                <span>⚡ Transmission Lines</span>
+                            </label>
+                            <label class="layer-option" style="display: flex; align-items: center; padding: 3px 0; cursor: pointer; font-size: 11px;">
+                                <input type="checkbox" id="showSubstations" style="margin-right: 6px;">
+                                <span>🔌 Substations</span>
                             </label>
                         </div>
                         

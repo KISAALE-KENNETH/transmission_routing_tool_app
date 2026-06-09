@@ -265,6 +265,39 @@ function createRoadsLayer() {
 }
 
 /**
+ * Create layer for Transmission Lines (UETCL 2016)
+ */
+function createTransmissionLinesLayer() {
+    const layer = L.layerGroup();
+    layer.on('add', function() {
+        loadGISLayer('transmission_lines', layer, {
+            color: '#FF0000',
+            weight: 3,
+            opacity: 0.8,
+            dashArray: '10, 5'
+        }, 'Transmission Line');
+    });
+    return layer;
+}
+
+/**
+ * Create layer for Substations (UETCL 2016)
+ */
+function createSubstationsLayer() {
+    const layer = L.layerGroup();
+    layer.on('add', function() {
+        loadGISLayer('substations', layer, {
+            radius: 8,
+            fillColor: '#FF6600',
+            color: '#CC0000',
+            weight: 2,
+            fillOpacity: 0.9
+        }, 'Substation');
+    });
+    return layer;
+}
+
+/**
  * Create layer for Water Bodies (legacy - now split into rivers, wetlands, lakes)
  */
 function createWaterBodiesLayer() {
